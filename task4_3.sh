@@ -21,7 +21,7 @@ test $# -eq 2 || {
 }
 
 # вказано абсолютний шлях
-[[ "$1" =~ (/)|(~/) ]] || { 
+[[ "$1" =~ (^/)|(^~/) ]] || {
    echo 'Error: the directory path must be an absolute path' >&2
    exit 2
 }
@@ -32,7 +32,7 @@ test -d "$1" || {
    exit 3
 }
 
-# другий параметр є числом більшим 0
+# другий параметр є числом більшим за 0
 test "$2" -gt 0 2>/dev/null || {
    echo 'Error: the number of archive files should be more than zero' >&2
    exit 4
@@ -49,7 +49,6 @@ tmp_var="$1"
 tmp_var="${tmp_var#/}"
 tmp_var="${tmp_var%/}"
 tmp_var="${tmp_var//\//-}"
-tmp_var="${tmp_var// /_}"
 archive_name="${backups_dir}/${tmp_var}"
 
 # ім'я директорії, що архівується
@@ -59,16 +58,14 @@ archive_directory="$1"
 archive_number="$2"
 let archive_number--
 
-# імена старих файлів для видалення
-removing_files_list=$(ls -1 ${archive_name}-[1-9]*.tar.gz 2>/dev/null | sort -V | head -n -${archive_number})
+# видалити старі архіви
+ls -1 "${archive_name}"-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].tar.gz 2>/dev/null | \
+sort -V | head -n -${archive_number} | while read remove_file; do
+   rm -f "$remove_file"
+done
 
-# ім'я наступного файла
-tmp_var=$(ls -1 ${archive_name}-[1-9]*.tar.gz 2>/dev/null | sort -Vr | head -n 1)
-tmp_var="${tmp_var%.tar.gz}"
-tmp_var="${tmp_var#${archive_name}-}"
-let tmp_var++ || tmp_var=1
-archive_file_number="$tmp_var"
-archive_file_name="${archive_name}-${archive_file_number}.tar.gz"
+# ім'я наступного файла: {file name}-YYYY-mm-dd-HHMMSS-NNNNNNNNN.tar.gz
+archive_file_name="${archive_name}-$(date +%F-%H%M%S-%N).tar.gz"
 
 # створити архів
 tar -cPzf "$archive_file_name" "$archive_directory" || {
@@ -76,8 +73,4 @@ tar -cPzf "$archive_file_name" "$archive_directory" || {
    exit 6
 }
 
-# стерти старі архіви
-rm -f $removing_files_list
-
 # exit :)
-
